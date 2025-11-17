@@ -517,7 +517,7 @@ Comprometimento rápido de contas e senhas.
 
 **Mitigação no Hardening:**  
 No laboratório, o uso de credenciais fracas foi intencional para fins didáticos.  
-No relatório, enfatize que em produção **nunca** se deve embutir credenciais em código.
+Em produção **nunca** se deve embutir credenciais em código.
 
 **Boas práticas:**
 - Uso de variáveis de ambiente seguras.
@@ -538,6 +538,5 @@ O `hardening_victim.sh` cobre parte dos vetores (SSH sem senha, bloqueio root, f
 - Inventário e atualização periódica de pacotes;
 - Segmentação de rede.
 
-Recomenda-se revisar e ampliar continuamente o escopo das medidas conforme novas ameaças e requisitos de compliance.
 
 ---
