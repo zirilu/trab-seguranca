@@ -335,14 +335,6 @@ Exposição de credenciais, exfiltração de arquivos, ponto de apoio para movim
 **Detecção / Evidência:**  
 Logs de conexão (`/var/log/syslog`, `/var/log/auth.log`), saída de `ss`/`nmap`, pacotes de rede suspeitos.
 
-**Mitigação no Hardening:**  
-O script de hardening atual não remove serviços automaticamente, mas a política de redução da superfície é indireta — o `ufw` nega conexões inbound por padrão, reduzindo a exposição.  
-**Recomendação:** Adapte `hardening_victim.sh` para desabilitar/remover serviços desnecessários:
-```sh
-sudo systemctl disable --now vsftpd || true
-sudo apt-get remove --purge -y vsftpd || true
-```
-Inclua essas linhas no hardening para fechar esse vetor.
 
 **Medidas adicionais:**  
 Inventário de serviços, lista branca (only necessary), monitoramento contínuo e lockdown de portas via firewall.
@@ -397,10 +389,7 @@ Alterações de timestamps, diffs, logs de alteração; hash SHA256 antes e depo
 
 **Mitigação no Hardening:**  
 O hardening não altera permissões de arquivos individuais por padrão, mas recomenda restringir acessos.  
-Inclua no script:
-```sh
-sudo chown professor:professor /home/professor/relatorio_institucional.txt
-sudo chmod 600 /home/professor/relatorio_institucional.txt
+
 ```
 Garante acesso apenas ao proprietário do arquivo.
 
@@ -428,13 +417,7 @@ Se conectar, indica suporte a cipher fraca.
 Facilita interceptação (se o key exchange for fraco), ataques man-in-the-middle.
 
 **Mitigação no Hardening:**  
-O hardening foca em `PasswordAuthentication no`, `PermitRootLogin no`, fail2ban e ufw. Para fechar este vetor, inclua obrigatoriedade de ciphers fortes no `sshd_config`:
-```sh
-echo 'Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com' | sudo tee -a /etc/ssh/sshd_config
-echo 'KexAlgorithms curve25519-sha256@libssh.org' | sudo tee -a /etc/ssh/sshd_config
-echo 'MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com' | sudo tee -a /etc/ssh/sshd_config
-sudo systemctl restart ssh
-```
+O hardening foca em `PasswordAuthentication no`, `PermitRootLogin no`, fail2ban e ufw.```
 
 **Medidas adicionais:**  
 Manter OpenSSH atualizado, auditorias regulares, testes de compatibilidade (balanceamento segurança/compatibilidade).
@@ -458,15 +441,7 @@ Perda de evidências, manipulação de provas, dificultando a investigação.
 
 **Mitigação no Hardening:**  
 Já há cópia de logs para `shared/` (host), formando mitigação manual.  
-Para reforçar:
-- Configurar `rsyslog` ou `syslog-ng` para enviar logs críticos ao host ou servidor remoto.
-- Habilitar `auditd` para eventos sensíveis:
-```sh
-# Exemplo (requer listener no host)
-# Adicionar em /etc/rsyslog.conf: *.* @<host-ip>:514
-apt-get install -y auditd
-systemctl enable --now auditd
-```
+
 
 **Medidas adicionais:**  
 WORM storage para logs, assinatura/hash periódico (append-only), integração com SIEM.
@@ -490,7 +465,7 @@ Escalonamento do incidente, comprometimento em cadeia de outros sistemas.
 
 **Mitigação no Hardening:**  
 Mitigação local não resolve segmentação — é requisito de arquitetura.  
-**Recomende no relatório:**
+**Recomendado:**
 - Segmentação dos ambientes em VLANs.
 - ACLs entre segmentos.
 - Isolamento de serviços críticos (DB, AD) em redes separadas.
@@ -530,13 +505,5 @@ Em produção **nunca** se deve embutir credenciais em código.
 ## Conclusão desta Seção
 
 Cada vulnerabilidade acima representa vetores de ataque reais — muitos simples de explorar quando combinados (por exemplo: serviços expostos + credenciais fracas).  
-O `hardening_victim.sh` cobre parte dos vetores (SSH sem senha, bloqueio root, fail2ban, ufw, atualizações automáticas), mas **não é solução única:** é essencial complementar o script com os controles adicionais listados acima:  
-- Remoção de serviços desnecessários;
-- Ciphers fortes no SSH;
-- Envio remoto e integridade de logs;
-- Permissões restritas de arquivos;
-- Inventário e atualização periódica de pacotes;
-- Segmentação de rede.
-
-
+O `hardening_victim.sh` cobre parte dos vetores (SSH sem senha, bloqueio root, fail2ban, ufw, atualizações automáticas), mas **não é solução única:** é essencial complementar a segurança de sua rede.
 ---
