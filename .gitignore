@@ -1,11 +1,55 @@
+# Vagrant
 .vagrant/
-*.log
 .vagrant/**
+*.box
+*.vmdk
+
+# Logs e evidências (não versionar resultados de ataques)
+*.log
+shared/attacker_results/*.log
+shared/attacker_results/*.txt
+shared/attacker_results/*.php
+shared/victim_logs/*
+shared/*_done.txt
+shared/vulnerabilities_added.txt
+shared/victim_provision_done.txt
+shared/attacker_provision_done.txt
+shared/hardening_done.txt
+
+# Chaves SSH (segurança)
 *.key
 *.pem
-shared/attacker_results/*
-shared/victim_logs/*
+*.pub
+id_rsa*
+authorized_keys
+
+# IDEs e editores
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+
+# OS
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Backups
+*.bak
+*.backup
+*.old
+*.orig
+
+# Imagens forenses (arquivos muito grandes)
+*.dd
+*.img
+*.raw

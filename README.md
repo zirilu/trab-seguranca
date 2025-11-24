@@ -1,509 +1,247 @@
-# Laboratório de Segurança de Redes — Documentação para Apresentação
+# Trabalho de Segurança de Redes - Auditoria e Demonstração de Vulnerabilidades
 
-> **Repositório:** seguranca-trabalho
+## 📋 Sobre o Projeto
 
----
+Este projeto demonstra um ambiente de laboratório controlado para análise de vulnerabilidades, ataques de segurança e aplicação de medidas de hardening em sistemas Linux. O cenário simula um ambiente acadêmico com duas máquinas virtuais: uma vítima (servidor) e uma atacante.
 
-> ⚠️ **Aviso:** Este laboratório foi desenvolvido para ambiente isolado (*Vagrant private_network*) e contém scripts que realizam ataques didáticos (força bruta). Execute apenas em ambiente controlado.
+## 🎯 Objetivo
 
----
-
-## Sumário
-
-1. Objetivo do projeto  
-2. Estrutura do repositório  
-3. Pré-requisitos (host)  
-4. Checklist rápido (antes da apresentação)  
-5. Fluxo da apresentação — comandos em ordem  
-6. Comandos de demonstração / forense (detalhados)  
-7. Como aplicar o hardening (quando e como)  
-8. Como reverter o hardening  
-9. Troubleshooting rápido  
-10. Arquivos importantes  
-11. Vulnerabilidades abordadas  
-12. Dicas para apresentação  
-13. Comandos úteis finais  
+Realizar uma auditoria completa de segurança demonstrando:
+- Identificação e exploração de vulnerabilidades reais
+- Análise forense digital e resposta a incidentes
+- Aplicação de contramedidas e hardening
+- Documentação de evidências e impactos
 
 ---
 
-## 1 — Objetivo do projeto
+## 🔍 1. Análise de Vulnerabilidades e Vetores de Ataque
 
-Simular um incidente de acesso não autorizado via SSH, realizar uma demonstração controlada de exploração (força bruta em senha fraca), coletar evidências forenses, aplicar uma mitigação (hardening) e validar as defesas.
+### 1.1 Identificação de Vulnerabilidades
 
-O foco é didático: agir como uma consultoria de segurança — diagnóstico → exploração controlada → coleta forense → mitigação → validação.
+#### **Vulnerabilidade 1: SSH com Autenticação por Senha Fraca**
+- **Descrição**: Serviço SSH configurado para aceitar autenticação por senha sem MFA (Multi-Factor Authentication)
+- **Risco**: Permite ataques de força bruta automatizados
+- **CVSS Score**: 9.8 (CRÍTICO)
+- **CWE**: CWE-521 (Weak Password Requirements)
 
----
+#### **Vulnerabilidade 2: Servidor FTP Anônimo com Upload Habilitado**
+- **Descrição**: vsftpd configurado para permitir login anônimo com permissão de escrita
+- **Risco**: Permite upload de webshells e backdoors sem autenticação
+- **CVSS Score**: 9.8 (CRÍTICO)
+- **CWE**: CWE-306 (Missing Authentication)
 
-## 2 — Estrutura do repositório
+#### **Vulnerabilidade 3: Local File Inclusion (LFI) + Remote Code Execution**
+- **Descrição**: Aplicação web PHP vulnerável permitindo leitura de arquivos arbitrários e webshell exposta
+- **Risco**: Acesso a arquivos sensíveis (senhas, logs) e execução remota de comandos
+- **CVSS Score**: 9.8 (CRÍTICO)
+- **CWE**: CWE-22 (Path Traversal), CWE-94 (Code Injection)
 
-```
-seguranca-trabalho/
-├─ Vagrantfile
-├─ provision/
-│  ├── provision_victim.sh
-│  ├── provision_attacker.sh
-│  ├── hardening_victim.sh
-│  └── revert_hardening.sh
-├─ presentation/
-│  └── run_demo.sh
-└─ shared/
-   ├── attacker_results/
-   ├── victim_logs/
-   └── wordlists/
-```
+#### **Vulnerabilidade 4: Binários SUID Mal Configurados**
+- **Descrição**: Binários (\`find\`, \`vim\`) com bit SUID root permitindo escalação de privilégios
+- **Risco**: Usuário comum pode obter acesso root ao sistema
+- **CVSS Score**: 8.8 (ALTO)
+- **CWE**: CWE-250 (Execution with Unnecessary Privileges)
 
-- **./shared (host)** ⇄ **/vagrant_shared (VMs)**  
-  Todos os arquivos de evidência devem ficar em `shared/`.
+#### **Vulnerabilidade 5: Logs com Permissões Inseguras**
+- **Descrição**: Arquivos de log com permissões 644 (legíveis por todos) contendo credenciais em texto claro
+- **Risco**: Exposição de informações sensíveis (senhas, tokens, comandos executados)
+- **CVSS Score**: 7.5 (ALTO)
+- **CWE**: CWE-532 (Information Exposure Through Log Files)
 
----
+#### **Vulnerabilidade 6: Ausência de IDS/IPS**
+- **Descrição**: Sistema sem fail2ban, AIDE ou qualquer sistema de detecção de intrusão
+- **Risco**: Ataques de força bruta e port scanning passam despercebidos
+- **CVSS Score**: 5.3 (MÉDIO)
+- **CWE**: CWE-778 (Insufficient Logging)
 
-## 3 — Pré-requisitos (host)
+### 1.2 Análise dos Vetores de Ataque
 
-- Git (opcional)
-- Vagrant (≥ 2.2.x recomendado)
-- VirtualBox compatível
-- Terminal (Linux/macOS/WSL recomendado)
-- Estar na pasta raiz do projeto ao rodar os comandos abaixo
-- Rodar o comando chmod +x presentantion/run_demo.sh
+#### **Vetor 1: Engenharia Social e Observação**
+- Obtenção de credenciais através de observação ou phishing
+- Exploração da confiança do usuário em senhas previsíveis
 
----
+#### **Vetor 2: Acesso Remoto Não Autorizado (SSH)**
+- Ataque de força bruta automatizado com wordlist
+- Exploração de autenticação por senha sem limitação de tentativas
+- Ausência de notificação de tentativas de login suspeitas
 
-## 4 — Checklist rápido (antes da apresentação)
+#### **Vetor 3: Exploração de Serviços de Rede Mal Configurados**
+- FTP anônimo para upload de payloads maliciosos
+- Aplicação web vulnerável (LFI) para exfiltração de dados
+- Webshell para persistência e execução remota
 
-- ✅ Criar pasta shared:
-  ```sh
-  mkdir -p shared/attacker_results shared/victim_logs shared/wordlists
-  ```
+#### **Vetor 4: Escalação de Privilégios**
+- Exploração de binários SUID para obter acesso root
+- Capabilities mal configuradas no Python
 
-- ✅ Tornar o orquestrador executável:
-  ```sh
-  chmod +x presentation/run_demo.sh
-  ```
-
-- ✅ Tornar o script de reversão executável:
-  ```sh
-  chmod +x provision/revert_hardening.sh
-  ```
-
-- ✅ (Recomendado) Criar snapshot antes do hardening:
-  ```sh
-  vagrant snapshot save victim before_hardening
-  vagrant snapshot save attacker before_hardening
-  ```
-
-- ✅ Gerar/ter a chave pública do attacker se for aplicar hardening sem snapshot.
+#### **Vetor 5: Persistência e Manipulação**
+- Modificação de arquivos confidenciais
+- Instalação de backdoors para acesso futuro
+- Exfiltração de dados sensíveis
 
 ---
 
-## 5 — Fluxo da apresentação — comandos em ordem
+## 🔬 2. Análise Forense Digital e Resposta a Incidentes
 
-Execute os blocos abaixo na raiz do projeto (onde está o Vagrantfile).
+### 2.1 Cadeia de Custódia das Evidências
 
-**5.0 — Preparar compartilhamento**
-```sh
-mkdir -p shared/attacker_results shared/victim_logs shared/wordlists
-```
+#### Metodologia de Coleta
+\`\`\`bash
+# 1. Criar imagem forense do sistema
+sudo dd if=/dev/sda of=/mnt/evidence/victim_disk.img bs=4M status=progress
+sudo sha256sum /mnt/evidence/victim_disk.img > /mnt/evidence/victim_disk.img.sha256
 
-**5.1 — Subir VMs e provisionar**
-```sh
-vagrant up
-```
+# 2. Documentar timestamp da coleta
+date --iso-8601=seconds >> /mnt/evidence/collection_timestamp.txt
 
-**5.2 — Confirmar provisionamento**
-```sh
-vagrant ssh victim -c "cat /vagrant_shared/victim_provision_done.txt"
-vagrant ssh attacker -c "cat /vagrant_shared/attacker_provision_done.txt"
-```
+# 3. Montar imagem em modo read-only
+sudo mkdir /mnt/forensics
+sudo mount -o ro,loop /mnt/evidence/victim_disk.img /mnt/forensics
+\`\`\`
 
-**5.3 — (Opcional) Snapshot antes do ataque**
-```sh
-vagrant snapshot save victim before_hardening
-vagrant snapshot save attacker before_hardening
-```
+#### Garantias da Cadeia de Custódia
+- **Integridade**: Hash SHA-256 documentado de todas as evidências
+- **Não-repúdio**: Timestamp criptográfico com servidor NTP confiável
+- **Rastreabilidade**: Logs de acesso com identificação do analista
+- **Isolamento**: Análise em máquina segregada da rede de produção
 
-**5.4 — Rodar orquestrador da demo (host)**
-```sh
-./presentation/run_demo.sh
-```
-O script realiza reconhecimento + brute force, exibe resultados e pausa solicitando intervenção manual para aplicar o hardening na victim.
+### 2.2 Análise de Logs Críticos
 
-> Não pressione ENTER até ter aplicado o hardening (ou preparado a chave) — veja instruções abaixo.
+#### **Log 1: Autenticação SSH (\`/var/log/auth.log\`)**
+\`\`\`bash
+# Identificar tentativas de login
+sudo grep "Failed password" /var/log/auth.log
+\`\`\`
 
----
+**Evidências coletadas**:
+- **IP do atacante**: 192.168.56.20
+- **Usuário comprometido**: professor
+- **Timestamp do ataque**: 2025-11-24 19:57:34 UTC
+- **Porta de origem**: 35038
 
-## 6 — Comandos de demonstração / forense (detalhados)
+#### **Log 2: Auditoria de Comandos Executados**
+\`\`\`bash
+sudo grep "professor" /var/log/auth.log | grep -i "session opened"
+sudo ausearch -ui professor -ts today
+\`\`\`
 
-**A) Reconhecimento (manual)**
-```sh
-vagrant ssh attacker -c "nmap -sV -p 22,2222 192.168.56.10"
-```
+#### **Log 3: Acesso HTTP (Apache)**
+\`\`\`bash
+sudo grep "view.php?file=" /var/log/apache2/access.log
+sudo grep "admin_backup.php" /var/log/apache2/access.log
+\`\`\`
 
-**B) Ataque didático (força bruta)**  
-(O orquestrador chama este script; para rodar manualmente:)
-```sh
-vagrant ssh attacker -c "/home/vagrant/attack_scripts/brute_force.sh 192.168.56.10 /vagrant_shared/wordlists/passwords.txt"
-```
-Resultados:  
-- `shared/attacker_results/bruteforce_result.log`  
-- `shared/attacker_results/found_password.txt` (se houver sucesso)
+### 2.3 Artefatos de Ataque Identificados
 
-**C) Prova de manipulação (após login)**  
-No attacker (após `ssh professor@192.168.56.10`):
-```sh
-# dentro da sessão SSH na victim
-echo "ALTERADO PELO ATACANTE - prova de acesso" >> /home/professor/relatorio_institucional.txt
-exit
-```
-
-**D) Coleta de evidências (preservando metadados)**
-```sh
-vagrant ssh victim -c "sudo mkdir -p /vagrant_shared/victim_logs && sudo chown -R vagrant:vagrant /vagrant_shared"
-vagrant ssh victim -c "sudo cp --preserve=mode,ownership,timestamps /var/log/auth.log /vagrant_shared/victim_logs/auth.log.copy"
-vagrant ssh victim -c "sudo sha256sum /vagrant_shared/victim_logs/auth.log.copy > /vagrant_shared/victim_logs/auth.log.copy.sha256"
-vagrant ssh victim -c "sudo grep 'Accepted' /var/log/auth.log | sudo tee /vagrant_shared/victim_logs/ssh_accepted.txt > /dev/null"
-vagrant ssh victim -c "sha256sum /vagrant_shared/victim_logs/ssh_accepted.txt > /vagrant_shared/victim_logs/ssh_accepted.txt.sha256"
-```
-Opcional — imagem forense (pode demorar):
-```sh
-vagrant ssh victim -c "sudo dd if=/dev/sda of=/vagrant_shared/victim_disk_image.dd bs=4M status=progress"
-vagrant ssh victim -c "sha256sum /vagrant_shared/victim_disk_image.dd > /vagrant_shared/victim_disk_image.dd.sha256"
-```
+| Artefato | Localização | Descrição |
+|----------|-------------|-----------|
+| Webshell | \`/var/www/html/admin_backup.php\` | Backdoor PHP para RCE |
+| Payload FTP | \`/srv/ftp/upload/backdoor.php\` | Tentativa de upload malicioso |
+| Credenciais | \`/shared/attacker_results/found_password.txt\` | Senha descoberta |
+| Shadow file | \`/shared/attacker_results/shadow_file.txt\` | Cópia exfiltrada |
 
 ---
 
-## 7 — Como aplicar o hardening (quando e como)
+## ⚠️ 3. Análise de Riscos e Impactos
 
-Durante a pausa do `run_demo.sh`, aplique o hardening em outro terminal (host). Antes disso, recomenda-se garantir a chave pública do attacker para o usuário professor, evitando lockout.
+### 3.1 Impacto Institucional
 
-**7.1 — Gerar e copiar a chave pública do attacker (recomendado antes do hardening)**
-```sh
-vagrant ssh attacker -c "ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_demo -N '' && cat ~/.ssh/id_demo.pub" > shared/attacker_id_demo.pub
-vagrant ssh victim -c "sudo mkdir -p /home/professor/.ssh && sudo cp /vagrant_shared/attacker_id_demo.pub /home/professor/.ssh/authorized_keys && sudo chown -R professor:professor /home/professor/.ssh"
-```
+#### **Impactos Técnicos**
+- **Confidencialidade**: Exposição de credenciais de professores, dados de pesquisa
+- **Integridade**: Manipulação de arquivos institucionais, alteração de registros
+- **Disponibilidade**: Risco de ransomware, perda de acesso a sistemas críticos
 
-**7.2 — Executar o hardening (após preparação)**
-```sh
-vagrant ssh victim -c "sudo bash /vagrant/provision/hardening_victim.sh"
-```
+#### **Impactos Financeiros**
+- Custo de resposta ao incidente: R\$ 50.000 - R\$ 200.000
+- Investimento em segurança: R\$ 100.000+
+- Multas LGPD: Até R\$ 50 milhões ou 2% do faturamento
 
-**7.3 — Voltar ao `run_demo.sh` e pressionar ENTER**
+#### **Impactos Reputacionais**
+- Perda de confiança de alunos, professores e parceiros
+- Danos à imagem institucional em rankings
+- Exposição negativa na mídia
 
-Ao pressionar ENTER, o orquestrador executará os testes pós-hardening automaticamente.
+### 3.2 Impacto Humano e Ético
 
----
+#### **Consequências para a Vítima (Professor)**
+- **Privacidade**: Exposição de informações pessoais e profissionais
+- **Psicológico**: Estresse, ansiedade, sensação de vulnerabilidade
+- **Profissional**: Danos à reputação acadêmica
+- **Legal**: Complicações se dados sensíveis foram comprometidos
 
-## 8 — Como reverter o hardening
-
-Se quiser retornar ao estado vulnerável para repetir a demonstração:
-
-```sh
-chmod +x provision/revert_hardening.sh
-vagrant ssh victim -c "sudo bash /vagrant/provision/revert_hardening.sh"
-# ou, se houver snapshot
-vagrant snapshot restore victim before_hardening
-```
-
----
-
-## 9 — Troubleshooting rápido (erros comuns)
-
-- **No such file or directory ao ler indicadores em /vagrant_shared:**  
-  Crie `shared/` no host e reprovisione:  
-  `mkdir -p shared && vagrant provision victim`
-
-- **Permission denied (publickey) pós-hardening:**  
-  Não copiou a chave pública para `/home/professor/.ssh/authorized_keys`. Veja seção 7.1.
-
-- **No route to host ao ssh na porta 22:**  
-  Provavelmente o hardening mudou a porta para 2222 ou o `ufw` bloqueou a 22. Teste porta 2222 com chave.
-
-- **Attacker banido:**  
-  O `fail2ban` pode banir por tentativas. Se `fail2ban-client` não existir, verifique `iptables`/`nftables` e remova a regra que contenha o IP do attacker ou insira `ACCEPT` temporário.
+#### **Responsabilidades Éticas**
+- Notificar imediatamente as vítimas
+- Transparência com a comunidade acadêmica
+- Compliance com LGPD (Lei nº 13.709/2018)
 
 ---
 
-## 10 — Arquivos importantes
+## 🛡️ 4. Contramedidas e Hardening Aplicado
 
-- `Vagrantfile` — define VMs, IPs e provisionamento.
-- `provision/provision_victim.sh` — configura a VM vítima (usuário professor, senhas fracas, SSH com senha).
-- `provision/provision_attacker.sh` — instala ferramentas no attacker e cria `brute_force.sh`.
-- `provision/hardening_victim.sh` — script de mitigação (porta 2222, fail2ban, ufw, desabilita senha).
-- `provision/revert_hardening.sh` — restaura o estado vulnerável.
-- `presentation/run_demo.sh` — orquestrador host-side (reconhecimento → ataque → pausa → testes pós-hardening).
-- `shared/` — evidências persistentes: attacker_results/, victim_logs/, wordlists/.
+### 4.1 Medidas Implementadas
 
----
+#### **SSH**
+- Desabilitar autenticação por senha (apenas chaves)
+- Desabilitar login root
+- Alterar porta (22 → 2222)
+- Implementar fail2ban (bloqueio após 3 tentativas)
 
-## 11 — Vulnerabilidades abordadas
+#### **Rede**
+- Firewall UFW ativo
+- Remoção de serviços desnecessários (FTP, Apache)
 
-1. Senha fraca / previsível  
-2. Autenticação por senha habilitada no SSH  
-3. `PermitRootLogin yes`  
-4. SSH na porta 22 sem proteções  
-5. Rede pouco segmentada  
-6. Falta de atualizações automáticas  
-7. Contas compartilhadas / credenciais fracas  
-8. Ausência de bloqueio por tentativas (até o hardening)  
-9. Serviços desnecessários ativos  
-10. Permissões de arquivos sensíveis mal configuradas  
-
-> O relatório teórico exigido pelo enunciado deve detalhar estas e **5 vulnerabilidades adicionais encontradas pelo grupo**.
+#### **Sistema**
+- Correção de binários SUID
+- Restrição de permissões de logs (640)
+- Instalação de auditd
+- Atualizações automáticas
 
 ---
 
-## 12 — Dicas para apresentação e arguição
+## 🚀 Instruções de Uso
 
-- Mostre evidências (hashes SHA256) — isso fortalece a cadeia de custódia.
-- Explique o porquê de cada mitigação no hardening (trade-offs).
-- Tenha o script `revert_hardening.sh` e/ou snapshot para refazer rapidamente casos de teste.
-- Garanta ao avaliador que os ataques são em ambiente isolado e para fins educacionais.
+### Pré-requisitos
+- VirtualBox e Vagrant instalados
+- Mínimo 4GB RAM disponível
 
----
+### Execução
 
-## 13 — Comandos úteis finais (cole em `commands.txt` se quiser)
-
-```sh
-# preparar ambiente
-mkdir -p shared/attacker_results shared/victim_logs shared/wordlists
-
-# subir vagrant
+\`\`\`bash
+# 1. Subir as VMs
 vagrant up
 
-# checar provisionamento
-vagrant ssh victim -c "cat /vagrant_shared/victim_provision_done.txt"
-vagrant ssh attacker -c "cat /vagrant_shared/attacker_provision_done.txt"
+# 2. Adicionar vulnerabilidades
+vagrant provision victim --provision-with vulnerabilities
 
-# snapshot (recomendado)
-vagrant snapshot save victim before_hardening
-vagrant snapshot save attacker before_hardening
+# 3. Executar demonstração
+bash presentation/run_demo.sh
 
-# rodar apresentação (orquestrador)
-./presentation/run_demo.sh
-
-# aplicar hardening (durante pausa)
+# 4. Aplicar hardening (quando pausar)
 vagrant ssh victim -c "sudo bash /vagrant/provision/hardening_victim.sh"
 
-# reverter hardening
-vagrant ssh victim -c "sudo bash /vagrant/provision/revert_hardening.sh"
-
-# reprovisionar victim
-vagrant provision victim
-
-# destruir tudo quando terminar
+# 5. Destruir VMs
 vagrant destroy -f
-rm -rf .vagrant
-```
+\`\`\`
 
 ---
 
-## Subir no GitHub
+## ⚠️ Aviso Legal
 
-1. Inicializar repositório e commitar:
+**Este projeto é exclusivamente para fins educacionais**. A execução destes ataques em sistemas sem autorização é **CRIME** (Lei nº 12.737/2012).
 
-    ```sh
-    git init
-    git add .
-    git commit -m "Laboratório de segurança - entrega"
-    git branch -M main
-    # adicionar remote (substitua <url>) e push
-    git remote add origin <url>
-    git push -u origin main
-    ```
-
-2. **Não suba chaves privadas ou evidências sensíveis; adicione `.gitignore` para `shared/`, se necessário.**
+- Utilize apenas em redes isoladas
+- Nunca execute em ambientes de produção
+- Obtenha autorização antes de qualquer teste
 
 ---
 
-## Vulnerabilidades Não Exploradas — Descrições, Vetores e Mitigação
+## 📚 Referências
 
-### 1) Serviços Desnecessários Expostos (ex.: FTP, Telnet, RPC)
-
-**Descrição:**  
-Serviços legados ou em desuso podem rodar com configurações inseguras, abrindo portas desnecessárias para o atacante.
-
-**Caminho de Exploração (PoC didática):**
-```sh
-# Identificar serviços abertos
-sudo ss -tuln
-sudo nmap -sV 192.168.56.10
-```
-Se `vsftpd` estiver ativo e mal configurado, um atacante pode se conectar, realizar uploads/downloads ou explorar vulnerabilidades conhecidas da versão.
-
-**Impacto:**  
-Exposição de credenciais, exfiltração de arquivos, ponto de apoio para movimentação lateral.
-
-**Detecção / Evidência:**  
-Logs de conexão (`/var/log/syslog`, `/var/log/auth.log`), saída de `ss`/`nmap`, pacotes de rede suspeitos.
-
-
-**Medidas adicionais:**  
-Inventário de serviços, lista branca (only necessary), monitoramento contínuo e lockdown de portas via firewall.
+- NIST Cybersecurity Framework
+- OWASP Top 10
+- CIS Benchmarks for Linux
+- LGPD - Lei nº 13.709/2018
 
 ---
 
-### 2) Pacotes Desatualizados / Vulnerabilidades Conhecidas (CVE)
-
-**Descrição:**  
-Versões antigas de aplicativos ou serviços (por exemplo, OpenSSH, libc, webservers) podem ter exploits públicos divulgados.
-
-**Caminho de Exploração (PoC didática):**
-```sh
-# Descobrir versões
-sudo apt list --installed | grep openssh
-vagrant ssh attacker -c "nmap -sV 192.168.56.10"
-```
-Buscar CVEs públicas para a versão e tentar PoC (somente em laboratório).
-
-**Impacto:**  
-Execução remota de código, escalonamento de privilégio, persistência do atacante.
-
-**Detecção / Evidência:**  
-Logs de crashes, segfaults, conexões anômalas; vulnerabilidades identificadas por scanners (nikto, nessus).
-
-**Mitigação no Hardening:**  
-O `hardening_victim.sh` instala `unattended-upgrades` para aplicar atualizações automáticas, reduzindo a janela de exposição.  
-O script também realiza upgrade forçado via `apt-get upgrade`.
-
-**Medidas adicionais:**  
-Gerenciamento de patches, scanners de vulnerabilidade periódicos, inventário de softwares.
-
----
-
-### 3) Permissões Incorretas de Arquivos Sensíveis (ex.: relatorio_institucional.txt)
-
-**Descrição:**  
-Arquivos sensíveis com permissões abertas (644 ou 777) permitem leitura/alteração por usuários não autorizados.
-
-**Caminho de Exploração (PoC didática):**
-```sh
-# Listar permissões do arquivo
-ls -l /home/professor/relatorio_institucional.txt
-```
-Se o atacante tiver acesso à conta ou via serviço mal configurado, pode ler/alterar.
-
-**Impacto:**  
-Vazamento de informações, adulteração de evidências, danos à reputação.
-
-**Detecção / Evidência:**  
-Alterações de timestamps, diffs, logs de alteração; hash SHA256 antes e depois evidenciam manipulação.
-
-**Mitigação no Hardening:**  
-O hardening não altera permissões de arquivos individuais por padrão, mas recomenda restringir acessos.  
-
-```
-Garante acesso apenas ao proprietário do arquivo.
-
-**Medidas adicionais:**  
-Controle de integridade (AIDE/Tripwire), backups assinados, políticas DLP.
-
----
-
-### 4) SSH: Ciphers / KEX / MAC Fracos e Configuração Insegura
-
-**Descrição:**  
-Algoritmos de criptografia fracos permitem downgrade attacks ou exploração de vulnerabilidades conhecidas.
-
-**Caminho de Exploração (PoC didática):**
-```sh
-# Auditar configurações
-sudo sshd -T | grep -E 'ciphers|macs|kex'
-
-# Forçar cipher antigo (em ambiente de teste)
-ssh -o Ciphers=aes128-cbc professor@192.168.56.10
-```
-Se conectar, indica suporte a cipher fraca.
-
-**Impacto:**  
-Facilita interceptação (se o key exchange for fraco), ataques man-in-the-middle.
-
-**Mitigação no Hardening:**  
-O hardening foca em `PasswordAuthentication no`, `PermitRootLogin no`, fail2ban e ufw.```
-
-**Medidas adicionais:**  
-Manter OpenSSH atualizado, auditorias regulares, testes de compatibilidade (balanceamento segurança/compatibilidade).
-
----
-
-### 5) Falta de Logging Remoto / Integridade dos Logs
-
-**Descrição:**  
-Logs apenas locais podem ser apagados ou adulterados por um atacante com acesso root — ausência de cópia remota enfraquece a cadeia de custódia.
-
-**Caminho de Exploração (PoC didática):**
-```sh
-# Atacante trunca ou edita log
-sudo truncate -s 0 /var/log/auth.log
-```
-Ou edita entradas do log para ocultar rastros.
-
-**Impacto:**  
-Perda de evidências, manipulação de provas, dificultando a investigação.
-
-**Mitigação no Hardening:**  
-Já há cópia de logs para `shared/` (host), formando mitigação manual.  
-
-
-**Medidas adicionais:**  
-WORM storage para logs, assinatura/hash periódico (append-only), integração com SIEM.
-
----
-
-### 6) Falta de Segmentação de Rede (Rede Plana do Laboratório)
-
-**Descrição:**  
-Rede do laboratório na mesma VLAN facilita movimentos laterais e acessos indevidos entre hosts.
-
-**Caminho de Exploração (PoC didática):**
-```sh
-# Scan na rede interna
-nmap -sV 192.168.56.0/24
-```
-Comprometendo a victim, o atacante pode tentar pivô para outros hosts.
-
-**Impacto:**  
-Escalonamento do incidente, comprometimento em cadeia de outros sistemas.
-
-**Mitigação no Hardening:**  
-Mitigação local não resolve segmentação — é requisito de arquitetura.  
-**Recomendado:**
-- Segmentação dos ambientes em VLANs.
-- ACLs entre segmentos.
-- Isolamento de serviços críticos (DB, AD) em redes separadas.
-
-**Medidas adicionais:**  
-Firewalls entre segmentos, jump hosts com MFA, Zero Trust para serviços sensíveis.
-
----
-
-### 7) Exposição de Credenciais em Scripts/Configurações (Hard-Coded Secrets)
-
-**Descrição:**  
-Scripts de provisionamento podem conter senhas em texto claro (ex.: `echo "professor:prof123" | chpasswd`), postura insegura para produção.
-
-**Caminho de Exploração (PoC didática):**
-```sh
-# Extrair credenciais em texto claro
-grep -R "prof123" -n .
-```
-Facilita comprometimento de contas por quem acessar o repo ou disco da VM.
-
-**Impacto:**  
-Comprometimento rápido de contas e senhas.
-
-**Mitigação no Hardening:**  
-No laboratório, o uso de credenciais fracas foi intencional para fins didáticos.  
-Em produção **nunca** se deve embutir credenciais em código.
-
-**Boas práticas:**
-- Uso de variáveis de ambiente seguras.
-- Vaults (ex.: HashiCorp Vault).
-- Prompts interativos para inserção de senhas.
-- Rotação automática de senhas e uso de autenticação por chave.
-
----
-
-## Conclusão desta Seção
-
-Cada vulnerabilidade acima representa vetores de ataque reais — muitos simples de explorar quando combinados (por exemplo: serviços expostos + credenciais fracas).  
-O `hardening_victim.sh` cobre parte dos vetores (SSH sem senha, bloqueio root, fail2ban, ufw, atualizações automáticas), mas **não é solução única:** é essencial complementar a segurança de sua rede.
----
+**Novembro de 2025**

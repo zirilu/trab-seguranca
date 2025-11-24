@@ -4,10 +4,7 @@
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = "ubuntu/focal64"  # Ubuntu Server 20.04 LTS
-
-  # Forçar uso do VirtualBox como provider (evita conflito com libvirt)
-  config.vm.provider "virtualbox"
+  config.vm.box = "ubuntu/focal64"  # Ubuntu Server 20.04 LTS (pode alterar para a versão desejada)
 
   # pasta compartilhada para pegar logs / evidências
   config.vm.synced_folder "./shared", "/vagrant_shared"
@@ -20,9 +17,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       vb.name = "lab_victim"
       vb.memory = 1024
       vb.cpus = 1
-      vb.gui = false
     end
+    
+    # Provisão inicial (vulnerabilidade base - SSH)
     victim.vm.provision "shell", path: "provision/provision_victim.sh"
+    
+    # Provisão das 5 vulnerabilidades extras (executar separadamente)
+    victim.vm.provision "vulnerabilities", type: "shell", 
+                        path: "provision/add_vulnerabilities.sh",
+                        run: "never"
   end
 
   # VM atacante (aluno)
@@ -33,7 +36,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       vb.name = "lab_attacker"
       vb.memory = 1024
       vb.cpus = 1
-      vb.gui = false
     end
     attacker.vm.provision "shell", path: "provision/provision_attacker.sh"
   end
