@@ -14,7 +14,8 @@ sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
 sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 
 # 3) mudar porta SSH para 2222 (reduz ruído de scans básicos)
-sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config || echo "Port 2222" >> /etc/ssh/sshd_config
+sed -i 's/^#*Port .*/Port 2222/' /etc/ssh/sshd_config
+grep -q "^Port 2222" /etc/ssh/sshd_config || echo "Port 2222" >> /etc/ssh/sshd_config
 
 # 4) instalar fail2ban
 apt-get install -y fail2ban
